@@ -13,18 +13,25 @@ class StepFunctionExampleStack(Stack):
             partition_key=ddb.Attribute(name="id", type=ddb.AttributeType.STRING),
             billing_mode=ddb.BillingMode.PAY_PER_REQUEST)  # This line makes it on-demand
 
+        # LAMBDA LAYER
+        layer = _lambda.LayerVersion(self, "CDKProducerConsumerSharedLayer",
+            code=_lambda.Code.from_asset("lambda/layer"),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_9])
+
         # LAMBDA FUNCTIONS
         producer = _lambda.Function(self, "Producer",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler="index.handler",
             code=_lambda.Code.from_asset("lambda/producer"),
-            environment={"TABLE_NAME": table.table_name})
+            environment={"TABLE_NAME": table.table_name},
+            layers=[layer])
 
         consumer = _lambda.Function(self, "Consumer",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler="index.handler",
             code=_lambda.Code.from_asset("lambda/consumer"),
-            environment={"TABLE_NAME": table.table_name})
+            environment={"TABLE_NAME": table.table_name},
+            layers=[layer])
 
         # DYNAMODB PERMISSIONS
         table.grant_read_write_data(producer)
